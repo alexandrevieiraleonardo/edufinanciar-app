@@ -1,0 +1,2780 @@
+// PRIMEIRA LINHA OBRIGATÓRIA PARA GESTURE HANDLER NO EXPO/SNACK
+import "react-native-gesture-handler";
+
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+
+
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useContext,
+  createContext,
+} from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Alert,
+  Animated,
+  Pressable,
+  ActivityIndicator,
+} from "react-native";
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import { NavigationContainer } from "@react-navigation/native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
+
+// ---------- CONTEXTOS ----------
+const UserContext = createContext({
+  userEmail: null,
+  setUserEmail: () => {},
+});
+
+// contexto do banco (aba Praticar)
+const BankContext = createContext(null);
+
+// ---------- CORES ----------
+const COLORS = {
+  primary: "#22c55e", // verde estilo Duolingo
+  primaryDark: "#16a34a",
+  primaryLight: "#dcfce7",
+  bg: "#f9fafb",
+  card: "#ffffff",
+  text: "#111827",
+  muted: "#6b7280",
+  accentBlue: "#3b82f6",
+};
+
+// ---------- MÓDULOS ----------
+const MODULOS = [
+  { id: "m1", title: "Bancos e Contas" },
+  { id: "m2", title: "Cartões" },
+  { id: "m3", title: "Apps de Pagamento" },
+  { id: "m4", title: "Segurança Digital" },
+  { id: "m5", title: "Orçamento" },
+  { id: "m6", title: "Investimentos" },
+];
+
+// ---------- TÓPICOS (10 por módulo) ----------
+const TOPICOS = {
+  m1: [
+    {
+      title: "Conta corrente",
+      text: "Conta usada para movimentações do dia a dia: receber salário, pagar boletos, fazer Pix e usar cartão de débito.",
+    },
+    {
+      title: "Conta poupança",
+      text: "Conta simples para guardar dinheiro e receber um pequeno rendimento ao longo do tempo.",
+    },
+    {
+      title: "Agência, conta e dígito",
+      text: "São números usados para identificar sua conta dentro do banco. Sempre confira antes de fazer transferências.",
+    },
+    {
+      title: "Saldo e saldo disponível",
+      text: "Saldo é o total que você tem na conta. Saldo disponível já considera valores bloqueados ou agendados.",
+    },
+    {
+      title: "Extrato bancário",
+      text: "Documento que mostra todas as entradas e saídas da conta: depósitos, Pix, boletos e tarifas.",
+    },
+    {
+      title: "Tarifas bancárias",
+      text: "Cobranças do banco por serviços, como manutenção da conta, saques em caixas e transferências em canais específicos.",
+    },
+    {
+      title: "Conta digital",
+      text: "Conta aberta e movimentada pelo celular, geralmente com menos tarifas e sem necessidade de ir à agência.",
+    },
+    {
+      title: "TED, DOC e Pix",
+      text: "Formas de transferência. Hoje o Pix é o mais usado, por ser rápido e funcionar 24 horas, todos os dias.",
+    },
+    {
+      title: "Limite da conta",
+      text: "Alguns bancos oferecem limite de cheque especial ou crédito vinculado à conta. Use com cuidado para não pagar juros.",
+    },
+    {
+      title: "Cuidados gerais",
+      text: "Nunca compartilhe senha ou token, confira o nome do favorecido antes de enviar dinheiro e acompanhe sempre o extrato.",
+    },
+  ],
+  m2: [
+    {
+      title: "Cartão de débito",
+      text: "Usado para pagar compras diretamente do saldo da conta. O valor sai na hora.",
+    },
+    {
+      title: "Cartão de crédito",
+      text: "Permite comprar agora e pagar depois, na fatura. Se não pagar o valor total, pode gerar juros altos.",
+    },
+    {
+      title: "Fatura",
+      text: "Documento mensal com todas as compras feitas no crédito. Mostra valor total, mínimo, vencimento e juros.",
+    },
+    {
+      title: "Limite do cartão",
+      text: "Valor máximo que você pode usar no crédito. Ao pagar a fatura, o limite vai sendo liberado novamente.",
+    },
+    {
+      title: "Parcelamento",
+      text: "Divide uma compra em várias parcelas. Algumas são sem juros, outras têm juros altos — sempre leia as condições.",
+    },
+    {
+      title: "Juros do rotativo",
+      text: "Quando você paga menos que o total da fatura, entra no crédito rotativo, que costuma ter juros muito elevados.",
+    },
+    {
+      title: "Cartão adicional",
+      text: "Cartão extra, ligado ao titular, para outro membro da família. As compras vão para a mesma fatura.",
+    },
+    {
+      title: "Cartão virtual",
+      text: "Versão digital do cartão, gerada no app do banco, para compras online mais seguras.",
+    },
+    {
+      title: "Cashback e pontos",
+      text: "Programas que devolvem parte do valor gasto ou geram pontos que podem ser trocados por produtos ou descontos.",
+    },
+    {
+      title: "Segurança do cartão",
+      text: "Nunca envie foto do cartão, não compartilhe senha e bloqueie o cartão no app em caso de perda ou suspeita de golpe.",
+    },
+  ],
+  m3: [
+    {
+      title: "Carteira digital",
+      text: "Aplicativos de pagamento que guardam seus cartões ou saldo para pagar contas, recarregar celular ou fazer compras.",
+    },
+    {
+      title: "Pix 24/7",
+      text: "Pix funciona todos os dias e horários, inclusive finais de semana e feriados, com transferência rápida.",
+    },
+    {
+      title: "Chaves Pix",
+      text: "Podem ser CPF, e-mail, telefone ou chave aleatória. Servem para receber Pix sem precisar informar todos os dados bancários.",
+    },
+    {
+      title: "QR Code de pagamento",
+      text: "Código lido pela câmera do celular que já traz os dados do pagamento, evitando erros ao digitar.",
+    },
+    {
+      title: "Boletos",
+      text: "Documentos de cobrança com linha digitável. Devem ser pagos até a data de vencimento para evitar juros e multa.",
+    },
+    {
+      title: "Comprovantes",
+      text: "Após pagar, sempre salve ou tire print do comprovante. Eles ajudam em caso de problemas ou contestação.",
+    },
+    {
+      title: "Transferências entre bancos",
+      text: "Hoje, em geral, são feitas por Pix. TED e DOC estão sendo cada vez menos usados.",
+    },
+    {
+      title: "Agendamento",
+      text: "Você pode agendar pagamentos e Pix para uma data futura, ideal para organizar contas antes do vencimento.",
+    },
+    {
+      title: "Limites de uso",
+      text: "Bancos definem limites diários de Pix e pagamentos por segurança. É possível ajustar alguns limites pelo app.",
+    },
+    {
+      title: "Cuidado com links",
+      text: "Nunca clique em links desconhecidos que prometem recompensas ou cancelamento de compras via apps de pagamento.",
+    },
+  ],
+  m4: [
+    {
+      title: "Phishing",
+      text: "Golpe em que alguém tenta enganar você com mensagens falsas para roubar senhas, códigos ou dados pessoais.",
+    },
+    {
+      title: "Senhas fortes",
+      text: "Use combinação de letras maiúsculas, minúsculas, números e símbolos. Evite datas de aniversário ou sequências fáceis.",
+    },
+    {
+      title: "Autenticação em duas etapas (2FA)",
+      text: "Além da senha, é pedido um código extra. Isso aumenta muito a segurança da conta.",
+    },
+    {
+      title: "Wi-Fi público",
+      text: "Evite acessar app de banco em redes públicas. Se precisar, use dados móveis ou uma VPN confiável.",
+    },
+    {
+      title: "Atualização de apps",
+      text: "Manter aplicativos atualizados ajuda a corrigir falhas de segurança e melhorar a proteção do usuário.",
+    },
+    {
+      title: "Golpes por telefone",
+      text: "Bancos não pedem senha completa nem código de segurança por ligação ou mensagem. Desconfie sempre.",
+    },
+    {
+      title: "Verificação de remetente",
+      text: "Antes de clicar em links, confira o e-mail ou número que enviou a mensagem. Endereços estranhos são sinal de alerta.",
+    },
+    {
+      title: "Instalação de apps",
+      text: "Baixe apps apenas de lojas oficiais (Google Play e App Store). Arquivos de origem desconhecida podem ser maliciosos.",
+    },
+    {
+      title: "Bloqueio de tela",
+      text: "Mantenha senha, biometria ou PIN no celular. Isso evita que outra pessoa acesse seus aplicativos em caso de perda.",
+    },
+    {
+      title: "Códigos de verificação",
+      text: "Códigos enviados por SMS ou app expiram rápido. Nunca compartilhe com terceiros, mesmo que pareçam ser do banco.",
+    },
+  ],
+  m5: [
+    {
+      title: "O que é orçamento",
+      text: "É o planejamento das entradas (salário, renda extra) e saídas (contas, compras, dívidas) do dinheiro.",
+    },
+    {
+      title: "Mapa de gastos",
+      text: "Anotar tudo o que gasta ajuda a entender para onde o dinheiro está indo e onde é possível economizar.",
+    },
+    {
+      title: "Gastos fixos e variáveis",
+      text: "Fixos são contas que se repetem todo mês (aluguel, luz). Variáveis mudam conforme o uso (lazer, compras extras).",
+    },
+    {
+      title: "Método 50/30/20",
+      text: "Sugestão: 50% do dinheiro para necessidades, 30% para desejos e 20% para poupar e investir.",
+    },
+    {
+      title: "Reserva de emergência",
+      text: "Dinheiro guardado para imprevistos, como doença ou perda de renda. Idealmente, pelo menos 3 a 6 meses de despesas.",
+    },
+    {
+      title: "Cortar gastos",
+      text: "Comece por assinaturas pouco usadas, serviços duplicados e compras por impulso.",
+    },
+    {
+      title: "Metas financeiras",
+      text: "Definir objetivos claros, como quitar uma dívida ou juntar para um curso, ajuda a manter o foco no longo prazo.",
+    },
+    {
+      title: "Automatizar poupança",
+      text: "Programar transferências automáticas para a poupança ou investimento ajuda a poupar sem depender de lembrar.",
+    },
+    {
+      title: "Revisão mensal",
+      text: "Ao final de cada mês, revise o que foi planejado e o que realmente aconteceu para ajustar o orçamento.",
+    },
+    {
+      title: "Pequenos gastos",
+      text: "Pequenas compras frequentes (lanches, apps, fretes) podem somar valores altos no fim do mês. Vale acompanhar de perto.",
+    },
+  ],
+  m6: [
+    {
+      title: "Renda fixa",
+      text: "Investimentos em que é possível saber de antemão como será a remuneração, como CDBs e Tesouro Direto.",
+    },
+    {
+      title: "Tesouro Direto",
+      text: "Programa do governo que permite investir em títulos públicos com valores acessíveis, pelo aplicativo das corretoras.",
+    },
+    {
+      title: "Renda variável",
+      text: "Investimentos que podem subir ou descer de valor, como ações e alguns fundos. Têm mais risco e mais potencial de retorno.",
+    },
+    {
+      title: "Diversificação",
+      text: "É espalhar o dinheiro em diferentes tipos de investimento para reduzir riscos.",
+    },
+    {
+      title: "Liquidez",
+      text: "É a facilidade de transformar o investimento em dinheiro novamente. Alguns permitem resgate rápido, outros não.",
+    },
+    {
+      title: "Prazo do investimento",
+      text: "Quanto maior o prazo, mais tempo o dinheiro fica aplicado. Em muitos casos, prazos longos ajudam a suavizar oscilações.",
+    },
+    {
+      title: "Taxas",
+      text: "Alguns produtos cobram taxa de administração e/ou performance. É importante entender essas taxas antes de investir.",
+    },
+    {
+      title: "Perfil de investidor",
+      text: "Cada pessoa tem um perfil: mais conservador, moderado ou arrojado. Ele ajuda a escolher produtos adequados.",
+    },
+    {
+      title: "ETFs",
+      text: "Fundos de índice negociados na bolsa que replicam a carteira de um indicador, como o Ibovespa.",
+    },
+    {
+      title: "Aportes regulares",
+      text: "Investir valores menores todo mês pode ser mais eficiente e acessível do que esperar grandes quantias.",
+    },
+  ],
+};
+
+// ---------- 60 PERGUNTAS (QUIZ) ----------
+const QUIZ = [
+  // m1
+  {
+    id: "m1q1",
+    module: "m1",
+    question: "O que é conta corrente?",
+    options: ["Conta para movimentações", "Investimento"],
+    answer: 0,
+  },
+  {
+    id: "m1q2",
+    module: "m1",
+    question: "O que é cartão débito?",
+    options: ["Paga na hora", "Paga depois"],
+    answer: 0,
+  },
+  {
+    id: "m1q3",
+    module: "m1",
+    question: "O que é extrato?",
+    options: ["Histórico de transações", "Nome do banco"],
+    answer: 0,
+  },
+  {
+    id: "m1q4",
+    module: "m1",
+    question: "TED é ...?",
+    options: ["Transferência com crédito no mesmo dia", "Cartão"],
+    answer: 0,
+  },
+  {
+    id: "m1q5",
+    module: "m1",
+    question: "PIX é ...?",
+    options: ["Pagamento instantâneo", "Empréstimo"],
+    answer: 0,
+  },
+  {
+    id: "m1q6",
+    module: "m1",
+    question: "O que é poupança?",
+    options: ["Conta de investimento simples", "Cartão"],
+    answer: 0,
+  },
+  {
+    id: "m1q7",
+    module: "m1",
+    question: "Como ver saldo?",
+    options: ["App do banco", "Ligando pra qualquer número"],
+    answer: 0,
+  },
+  {
+    id: "m1q8",
+    module: "m1",
+    question: "Conta digital precisa agência?",
+    options: ["Nem sempre", "Sempre"],
+    answer: 0,
+  },
+  {
+    id: "m1q9",
+    module: "m1",
+    question: "O que é tarifa bancária?",
+    options: ["Cobrança por serviço", "Desconto"],
+    answer: 0,
+  },
+  {
+    id: "m1q10",
+    module: "m1",
+    question: "O que é limite?",
+    options: ["Valor máximo de crédito", "Saldo do banco"],
+    answer: 0,
+  },
+
+  // m2
+  {
+    id: "m2q1",
+    module: "m2",
+    question: "Cartão crédito: paga depois?",
+    options: ["Sim", "Não"],
+    answer: 0,
+  },
+  {
+    id: "m2q2",
+    module: "m2",
+    question: "Fatura é ...",
+    options: ["Conta do mês", "Tipo de conta"],
+    answer: 0,
+  },
+  {
+    id: "m2q3",
+    module: "m2",
+    question: "Anuidade é ...",
+    options: ["Cobrança anual do cartão", "Desconto"],
+    answer: 0,
+  },
+  {
+    id: "m2q4",
+    module: "m2",
+    question: "Parcelamento aumenta juros?",
+    options: ["Pode aumentar", "Nunca"],
+    answer: 0,
+  },
+  {
+    id: "m2q5",
+    module: "m2",
+    question: "Cartão virtual é seguro?",
+    options: ["Sim para compras online", "Não"],
+    answer: 0,
+  },
+  {
+    id: "m2q6",
+    module: "m2",
+    question: "Cartão adicional serve para ...",
+    options: ["Ter mais usuários", "Diminuir limite"],
+    answer: 0,
+  },
+  {
+    id: "m2q7",
+    module: "m2",
+    question: "Como evitar clonagem?",
+    options: ["Não compartilhar dados", "Enviar foto do cartão"],
+    answer: 0,
+  },
+  {
+    id: "m2q8",
+    module: "m2",
+    question: "Senha do cartão deve ser ...",
+    options: ["Segura e confidencial", "Compartilhada"],
+    answer: 0,
+  },
+  {
+    id: "m2q9",
+    module: "m2",
+    question: "O que é rotativo?",
+    options: ["Juros por não pagar total da fatura", "Desconto"],
+    answer: 0,
+  },
+  {
+    id: "m2q10",
+    module: "m2",
+    question: "Cashback é ...",
+    options: ["Reembolso parcial", "Tarifa"],
+    answer: 0,
+  },
+
+  // m3
+  {
+    id: "m3q1",
+    module: "m3",
+    question: "Pix funciona 24/7?",
+    options: ["Sim", "Não"],
+    answer: 0,
+  },
+  {
+    id: "m3q2",
+    module: "m3",
+    question: "Boleto tem código com quantos dígitos?",
+    options: ["47", "10"],
+    answer: 0,
+  },
+  {
+    id: "m3q3",
+    module: "m3",
+    question: "Carteira digital é app de ...",
+    options: ["Pagamento", "Banco físico"],
+    answer: 0,
+  },
+  {
+    id: "m3q4",
+    module: "m3",
+    question: "QR Code é usado para ...",
+    options: ["Pagamento rápido", "Ler documento"],
+    answer: 0,
+  },
+  {
+    id: "m3q5",
+    module: "m3",
+    question: "Chave Pix pode ser ...",
+    options: ["CPF/email/telefone", "Apenas CPF"],
+    answer: 0,
+  },
+  {
+    id: "m3q6",
+    module: "m3",
+    question: "TED x DOC diferença?",
+    options: ["Prazo de compensação", "Nome do banco"],
+    answer: 0,
+  },
+  {
+    id: "m3q7",
+    module: "m3",
+    question: "Como verificar app real?",
+    options: ["Verificar loja oficial e CNPJ", "Baixar de qualquer link"],
+    answer: 0,
+  },
+  {
+    id: "m3q8",
+    module: "m3",
+    question: "Salvar comprovante é ...",
+    options: ["Boa prática", "Desnecessário"],
+    answer: 0,
+  },
+  {
+    id: "m3q9",
+    module: "m3",
+    question: "Pix agendado é possível?",
+    options: ["Sim", "Não"],
+    answer: 0,
+  },
+  {
+    id: "m3q10",
+    module: "m3",
+    question: "Pagamento instantâneo é ...",
+    options: ["Confirmado rápido", "Sempre com erro"],
+    answer: 0,
+  },
+
+  // m4
+  {
+    id: "m4q1",
+    module: "m4",
+    question: "Phishing é ...",
+    options: ["Golpe por mensagem", "Tipo de conta"],
+    answer: 0,
+  },
+  {
+    id: "m4q2",
+    module: "m4",
+    question: "2FA aumenta segurança?",
+    options: ["Sim", "Não"],
+    answer: 0,
+  },
+  {
+    id: "m4q3",
+    module: "m4",
+    question: "Wi-Fi público é seguro para banco?",
+    options: ["Não, evitar ou usar VPN", "Sempre seguro"],
+    answer: 0,
+  },
+  {
+    id: "m4q4",
+    module: "m4",
+    question: "Senha forte tem ...",
+    options: ["Maiúsculas, minúsculas, números", "Somente números"],
+    answer: 0,
+  },
+  {
+    id: "m4q5",
+    module: "m4",
+    question: "Atualizar apps é importante?",
+    options: ["Sim", "Não"],
+    answer: 0,
+  },
+  {
+    id: "m4q6",
+    module: "m4",
+    question: "Compartilhar código do banco?",
+    options: ["Nunca", "Sempre"],
+    answer: 0,
+  },
+  {
+    id: "m4q7",
+    module: "m4",
+    question: "Verificar remetente do e-mail?",
+    options: ["Sim", "Não"],
+    answer: 0,
+  },
+  {
+    id: "m4q8",
+    module: "m4",
+    question: "Instalar apps desconhecidos?",
+    options: ["Não", "Sim"],
+    answer: 0,
+  },
+  {
+    id: "m4q9",
+    module: "m4",
+    question: "Bloquear tela é ...",
+    options: ["Fundamental", "Opcional"],
+    answer: 0,
+  },
+  {
+    id: "m4q10",
+    module: "m4",
+    question: "Código de verificação vence rápido?",
+    options: ["Sim", "Não"],
+    answer: 0,
+  },
+
+  // m5
+  {
+    id: "m5q1",
+    module: "m5",
+    question: "O que é orçamento?",
+    options: ["Planejar receitas e despesas", "Investir tudo"],
+    answer: 0,
+  },
+  {
+    id: "m5q2",
+    module: "m5",
+    question: "Reserva de emergência é ...",
+    options: ["Poupança para imprevistos", "Cartão"],
+    answer: 0,
+  },
+  {
+    id: "m5q3",
+    module: "m5",
+    question: "50/30/20 é ...",
+    options: ["Método de divisão de despesas", "Tipo de conta"],
+    answer: 0,
+  },
+  {
+    id: "m5q4",
+    module: "m5",
+    question: "Como cortar gastos?",
+    options: ["Revisar assinaturas", "Nunca cortar"],
+    answer: 0,
+  },
+  {
+    id: "m5q5",
+    module: "m5",
+    question: "Anotar gastos ajuda?",
+    options: ["Sim", "Não"],
+    answer: 0,
+  },
+  {
+    id: "m5q6",
+    module: "m5",
+    question: "Automatizar poupança é ...",
+    options: ["Bom", "Ruim"],
+    answer: 0,
+  },
+  {
+    id: "m5q7",
+    module: "m5",
+    question: "Gastos fixos são ...",
+    options: ["Aluguel, contas", "Compras ocasionais"],
+    answer: 0,
+  },
+  {
+    id: "m5q8",
+    module: "m5",
+    question: "Planejar meta financeira?",
+    options: ["Sim", "Não"],
+    answer: 0,
+  },
+  {
+    id: "m5q9",
+    module: "m5",
+    question: "Controlar pequenos gastos?",
+    options: ["Importante", "Sem importância"],
+    answer: 0,
+  },
+  {
+    id: "m5q10",
+    module: "m5",
+    question: "Revisar orçamento mensal?",
+    options: ["Sim", "Não"],
+    answer: 0,
+  },
+
+  // m6
+  {
+    id: "m6q1",
+    module: "m6",
+    question: "O que é CDB?",
+    options: ["Investimento em renda fixa", "Cartão"],
+    answer: 0,
+  },
+  {
+    id: "m6q2",
+    module: "m6",
+    question: "Tesouro Direto é ...",
+    options: ["Títulos públicos", "Tipo de conta"],
+    answer: 0,
+  },
+  {
+    id: "m6q3",
+    module: "m6",
+    question: "Risco em ações é ...",
+    options: ["Maior volatilidade", "Sempre seguro"],
+    answer: 0,
+  },
+  {
+    id: "m6q4",
+    module: "m6",
+    question: "Diversificar é ...",
+    options: ["Distribuir investimentos", "Colocar tudo em um só lugar"],
+    answer: 0,
+  },
+  {
+    id: "m6q5",
+    module: "m6",
+    question: "Liquidez é ...",
+    options: ["Facilidade de resgate", "Tipo de cartão"],
+    answer: 0,
+  },
+  {
+    id: "m6q6",
+    module: "m6",
+    question: "Investir longo prazo?",
+    options: ["Pode reduzir risco", "Sempre ruim"],
+    answer: 0,
+  },
+  {
+    id: "m6q7",
+    module: "m6",
+    question: "Taxa de administração é ...",
+    options: ["Cobrança de fundos", "Nome de banco"],
+    answer: 0,
+  },
+  {
+    id: "m6q8",
+    module: "m6",
+    question: "Benchmark serve para ...",
+    options: ["Comparar desempenho", "Pagar taxas"],
+    answer: 0,
+  },
+  {
+    id: "m6q9",
+    module: "m6",
+    question: "ETFs replicam ...",
+    options: ["Índices", "Contas"],
+    answer: 0,
+  },
+  {
+    id: "m6q10",
+    module: "m6",
+    question: "Aporte periódico é ...",
+    options: ["Investimento regular", "Despesas"],
+    answer: 0,
+  },
+];
+
+// ---------- CONTAS DO BANCO (ABA PRATICAR) ----------
+const INITIAL_CONTAS = {
+  a: {
+    id: "a",
+    apelido: "Pessoa A",
+    bankName: "Banco Verde",
+    pin: "1111",
+    saldo: 1200.0,
+    extrato: [],
+    chaves: {
+      cpf: "111.111.111-11",
+      email: "pessoa.a@edufinanciar.com",
+      celular: "(81) 98888-0001",
+    },
+  },
+  b: {
+    id: "b",
+    apelido: "Pessoa B",
+    bankName: "Banco Azul",
+    pin: "2222",
+    saldo: 650.0,
+    extrato: [],
+    chaves: {
+      cpf: "222.222.222-22",
+      email: "pessoa.b@edufinanciar.com",
+      celular: "(81) 98888-0002",
+    },
+  },
+  c: {
+    id: "c",
+    apelido: "Pessoa C",
+    bankName: "Banco Laranja",
+    pin: "3333",
+    saldo: 900.0,
+    extrato: [],
+    chaves: {
+      cpf: "333.333.333-33",
+      email: "pessoa.c@edufinanciar.com",
+      celular: "(81) 98888-0003",
+    },
+  },
+  d: {
+    id: "d",
+    apelido: "Pessoa D",
+    bankName: "Banco Roxo",
+    pin: "4444",
+    saldo: 300.0,
+    extrato: [],
+    chaves: {
+      cpf: "444.444.444-44",
+      email: "pessoa.d@edufinanciar.com",
+      celular: "(81) 98888-0004",
+    },
+  },
+};
+
+// ---------- HELPERS DE NAVEGAÇÃO ----------
+const Tab = createBottomTabNavigator();
+const RootStack = createNativeStackNavigator();
+const LearnStack = createNativeStackNavigator();
+const QuizStack = createNativeStackNavigator();
+const PracticeStack = createNativeStackNavigator();
+
+// Helpers de data para streak
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
+}
+function yesterdayString() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+// ---------- BOTÃO ANIMADO ----------
+function AnimatedButton({ onPress, style, children }) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  function handlePressIn() {
+    Animated.spring(scale, {
+      toValue: 0.96,
+      useNativeDriver: true,
+      speed: 40,
+      bounciness: 4,
+    }).start();
+  }
+
+  function handlePressOut() {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 40,
+      bounciness: 4,
+    }).start();
+  }
+
+  return (
+    <Animated.View style={[{ transform: [{ scale }] }, style]}>
+      <Pressable
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        onPress={onPress}
+        style={{ alignItems: "center", justifyContent: "center" }}
+
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+// ---------- SPLASH ----------
+function SplashScreen() {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: COLORS.primary,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Animated.View style={{ opacity, transform: [{ scale }] }}>
+        {/* "Logomarca" simples */}
+        <View
+          style={{
+            width: 90,
+            height: 90,
+            borderRadius: 45,
+            backgroundColor: "#16a34a",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 12,
+          }}
+        >
+          <Text style={{ color: "#f9fafb", fontSize: 32, fontWeight: "800" }}>
+            Ef
+          </Text>
+        </View>
+        <Text
+          style={{
+            color: "#fff",
+            fontSize: 28,
+            fontWeight: "700",
+            textAlign: "center",
+          }}
+        >
+          Edufinanciar
+        </Text>
+        <Text style={{ color: "#e5e7eb", marginTop: 8, textAlign: "center" }}>
+          Seu app de treino financeiro e banco simulado
+        </Text>
+        <ActivityIndicator
+          style={{ marginTop: 16 }}
+          size="large"
+          color="#fff"
+        />
+      </Animated.View>
+    </View>
+  );
+}
+
+// ---------- FUNÇÃO COMPARTILHADA: REGISTRAR RESULTADO DO QUIZ ----------
+async function registrarResultadoQuiz({
+  acertos,
+  total,
+  tipo, // "modulo" ou "geral"
+  moduleId, // id do módulo ou "GERAL"
+  userEmail,
+}) {
+  const earnedXp = acertos * 10;
+
+  // XP total
+  const cur = await AsyncStorage.getItem("@app_xp");
+  const curXp = cur ? Number(cur) : 0;
+  const newXp = curXp + earnedXp;
+  await AsyncStorage.setItem("@app_xp", String(newXp));
+
+  // Streak
+  const last = await AsyncStorage.getItem("@app_last_quiz");
+  const today = todayString();
+  const yesterday = yesterdayString();
+  let streak = 1;
+
+  if (last === today) {
+    const s = await AsyncStorage.getItem("@app_streak");
+    streak = s ? Number(s) : 1;
+  } else if (last === yesterday) {
+    const s = await AsyncStorage.getItem("@app_streak");
+    streak = s ? Number(s) + 1 : 2;
+  } else {
+    streak = 1;
+  }
+
+  await AsyncStorage.setItem("@app_streak", String(streak));
+  await AsyncStorage.setItem("@app_last_quiz", today);
+
+  // Histórico
+  const historyRaw = await AsyncStorage.getItem("@quiz_history");
+  const history = historyRaw ? JSON.parse(historyRaw) : [];
+  const newEntry = {
+    id: Date.now(),
+    email: userEmail || "anon",
+    kind: tipo,
+    module: moduleId,
+    correct: acertos,
+    total,
+    created_at: new Date().toISOString(),
+  };
+  const newHistory = [newEntry, ...history].slice(0, 10);
+  await AsyncStorage.setItem("@quiz_history", JSON.stringify(newHistory));
+
+  return { earnedXp, newXp, streak };
+}
+
+// ---------- LOGIN ----------
+function LoginScreen() {
+  const { setUserEmail } = useContext(UserContext);
+  const [email, setEmail] = useState("");
+  const [nome, setNome] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogin() {
+    if (!email.trim()) {
+      return Alert.alert("Aviso", "Digite seu e-mail.");
+    }
+    setLoading(true);
+    const safeEmail = email.trim().toLowerCase();
+
+    try {
+      await AsyncStorage.setItem("@user_email", safeEmail);
+      if (nome.trim()) {
+        await AsyncStorage.setItem("@user_name", nome.trim());
+      }
+      setUserEmail(safeEmail);
+    } catch (e) {
+      console.log(e);
+      Alert.alert("Erro", "Falha ao salvar usuário.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <View style={[styles.container, { justifyContent: "center" }]}>
+      <View style={{ alignItems: "center", marginBottom: 20 }}>
+        <View
+          style={{
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            backgroundColor: COLORS.primary,
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 8,
+          }}
+        >
+          <Text style={{ color: "#f9fafb", fontSize: 28, fontWeight: "800" }}>
+            Ef
+          </Text>
+        </View>
+        <Text style={styles.title}>Edufinanciar</Text>
+        <Text style={{ color: COLORS.muted, marginTop: 4 }}>
+          Aprenda, pratique e simule um banco digital.
+        </Text>
+      </View>
+
+      <Text style={styles.sub}>Nome (opcional)</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Seu nome"
+        value={nome}
+        onChangeText={setNome}
+      />
+
+      <Text style={styles.sub}>E-mail</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="email@exemplo.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        value={email}
+        onChangeText={setEmail}
+      />
+
+      <AnimatedButton style={styles.btn} onPress={handleLogin}>
+        <Text style={styles.btnText}>
+          {loading ? "Entrando..." : "Entrar"}
+        </Text>
+      </AnimatedButton>
+    </View>
+  );
+}
+
+// ---------- HOME ----------
+function HomeScreen({ navigation }) {
+  const { userEmail, setUserEmail } = useContext(UserContext);
+  const [userName, setUserName] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const storedName = await AsyncStorage.getItem("@user_name");
+        if (storedName) setUserName(storedName);
+      } catch (e) {
+        console.log(e);
+      }
+    })();
+  }, []);
+
+  async function handleLogout() {
+    try {
+      await AsyncStorage.multiRemove([
+        "@user_email",
+        "@user_name",
+        "@app_xp",
+        "@app_streak",
+        "@app_last_quiz",
+        "@quiz_history",
+      ]);
+    } catch (e) {
+      console.log(e);
+    }
+    setUserEmail(null);
+  }
+
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: COLORS.bg }]}>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 12,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: COLORS.primary,
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 8,
+            }}
+          >
+            <Text
+              style={{
+                color: "#f9fafb",
+                fontWeight: "800",
+                fontSize: 18,
+              }}
+            >
+              Ef
+            </Text>
+          </View>
+          <Text style={styles.title}>Edufinanciar</Text>
+        </View>
+
+        {userEmail && (
+          <TouchableOpacity onPress={handleLogout}>
+            <Text style={{ color: COLORS.accentBlue, fontWeight: "600" }}>
+              Sair
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {(userName || userEmail) && (
+        <Text style={{ color: COLORS.muted, marginBottom: 8 }}>
+          Logado como: {userName || userEmail}
+        </Text>
+      )}
+
+      <AnimatedButton
+        style={styles.card}
+        onPress={() => navigation.navigate("Aprender")}
+      >
+        <Text style={styles.cardTitle}>📘 Aprender por módulos</Text>
+        <Text style={styles.cardDesc}>
+          Leia tópicos curtos de bancos, cartões, orçamento e muito mais.
+        </Text>
+      </AnimatedButton>
+
+      <AnimatedButton
+        style={styles.card}
+        onPress={() => navigation.navigate("Praticar")}
+      >
+        <Text style={styles.cardTitle}>🏦 Banco digital simulado</Text>
+        <Text style={styles.cardDesc}>
+          Entre com PIN, veja saldo, extrato, Pix e boletos como se fosse um
+          app de banco real.
+        </Text>
+      </AnimatedButton>
+
+      <AnimatedButton
+        style={styles.card}
+        onPress={() => navigation.navigate("Quiz")}
+      >
+        <Text style={styles.cardTitle}>🧪 Quiz e Simulado Geral</Text>
+        <Text style={styles.cardDesc}>
+          Faça quizzes por módulo ou um simulado completo com 60 questões.
+        </Text>
+      </AnimatedButton>
+
+      <AnimatedButton
+        style={styles.card}
+        onPress={() => navigation.navigate("Progresso")}
+      >
+        <Text style={styles.cardTitle}>📊 Progresso gamificado</Text>
+        <Text style={styles.cardDesc}>
+          Veja XP, nível, streak e medalhas, em estilo Duolingo.
+        </Text>
+      </AnimatedButton>
+    </ScrollView>
+  );
+}
+
+// ---------- APRENDER ----------
+function AprenderHome({ navigation }) {
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: COLORS.bg }]}>
+      <Text style={styles.title}>Aprender</Text>
+      <Text style={{ color: COLORS.muted, marginTop: 4, marginBottom: 10 }}>
+        Leia os tópicos de cada módulo e depois faça o quiz para revisar.
+      </Text>
+      <View style={styles.modGroup}>
+        {MODULOS.map((m) => (
+          <AnimatedButton
+            key={m.id}
+            style={styles.modTouchable}
+            onPress={() => navigation.navigate("Module", { moduleId: m.id })}
+          >
+            <Text style={styles.modTitle}>{m.title}</Text>
+            <Text style={styles.modSmall}>
+              Toque para ver os 10 tópicos e o quiz do módulo
+            </Text>
+          </AnimatedButton>
+        ))}
+      </View>
+    </ScrollView>
+  );
+}
+
+function ModuleScreen({ route, navigation }) {
+  const { moduleId } = route.params;
+  const module = MODULOS.find((m) => m.id === moduleId);
+  const topics = TOPICOS[moduleId] || [];
+
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: COLORS.bg }]}>
+      {/* Botão voltar para lista de módulos */}
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={{ marginBottom: 8, flexDirection: "row", alignItems: "center" }}
+      >
+        <Ionicons name="arrow-back" size={18} color={COLORS.muted} />
+        <Text style={{ marginLeft: 4, color: COLORS.muted }}>Voltar</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.title}>{module?.title ?? "Módulo"}</Text>
+      <Text style={{ color: COLORS.muted, marginVertical: 8 }}>
+        Leia os tópicos abaixo. Depois, faça o quiz deste módulo para testar o
+        que aprendeu.
+      </Text>
+
+      {topics.map((t, i) => (
+        <View key={i} style={styles.topicBox}>
+          <Text style={styles.topicTitle}>
+            {i + 1}. {t.title}
+          </Text>
+          <Text style={styles.topicText}>{t.text}</Text>
+        </View>
+      ))}
+
+      <AnimatedButton
+        style={[styles.btn, { marginTop: 16, marginBottom: 12 }]}
+        onPress={() => navigation.navigate("ModuleQuiz", { moduleId })}
+      >
+        <Text style={styles.btnText}>Fazer Quiz deste módulo</Text>
+      </AnimatedButton>
+    </ScrollView>
+  );
+}
+
+// QUIZ POR MÓDULO (dentro da aba Aprender)
+function ModuleQuizScreen({ route, navigation }) {
+  const { moduleId } = route.params;
+  const { userEmail } = useContext(UserContext);
+
+  const questions = QUIZ.filter((q) => q.module === moduleId);
+  const [index, setIndex] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [score, setScore] = useState(0);
+  const [finished, setFinished] = useState(false);
+
+  useEffect(() => {
+    setIndex(0);
+    setSelected(null);
+    setScore(0);
+    setFinished(false);
+  }, [moduleId]);
+
+  async function handleAnswer(i) {
+    if (selected !== null) return;
+    setSelected(i);
+    const correct = questions[index].answer === i;
+    if (correct) setScore((s) => s + 1);
+
+    setTimeout(async () => {
+      setSelected(null);
+      if (index + 1 < questions.length) {
+        setIndex((idx) => idx + 1);
+      } else {
+        setFinished(true);
+        const acertos = score + (correct ? 1 : 0);
+        try {
+          const { earnedXp, newXp, streak } = await registrarResultadoQuiz({
+            acertos,
+            total: questions.length,
+            tipo: "modulo",
+            moduleId,
+            userEmail,
+          });
+
+          Alert.alert(
+            "Quiz do módulo finalizado",
+            `Acertos: ${acertos}/${questions.length}\nXP ganho: ${earnedXp}\nXP total: ${newXp}\nStreak: ${streak} dia(s)`
+          );
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }, 600);
+  }
+
+  if (!questions.length) {
+    return (
+      <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
+        <Text style={styles.title}>Quiz do módulo</Text>
+        <Text style={{ marginTop: 12 }}>
+          Nenhuma pergunta encontrada para este módulo.
+        </Text>
+      </View>
+    );
+  }
+
+  if (finished) {
+    return (
+      <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
+        <Text style={styles.title}>Resultado do Módulo</Text>
+        <Text style={{ marginTop: 12 }}>
+          Acertos: {score} / {questions.length}
+        </Text>
+        <AnimatedButton
+          style={[styles.btn, { marginTop: 12 }]}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.btnText}>Voltar para o módulo</Text>
+        </AnimatedButton>
+        <AnimatedButton
+          style={[styles.btn, { marginTop: 10, backgroundColor: "#6b7280" }]}
+          onPress={() => {
+            setIndex(0);
+            setScore(0);
+            setSelected(null);
+            setFinished(false);
+          }}
+        >
+          <Text style={styles.btnText}>Refazer quiz do módulo</Text>
+        </AnimatedButton>
+      </View>
+    );
+  }
+
+  const q = questions[index];
+
+  return (
+    <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
+      <Text style={styles.count}>
+        Pergunta {index + 1} / {questions.length}
+      </Text>
+      <Text style={styles.question}>{q.question}</Text>
+      <View style={{ marginTop: 12 }}>
+        {q.options.map((opt, i) => {
+          const isSelected = selected === i;
+          const correct = q.answer === i;
+          let bg = "#fff";
+          if (selected !== null) {
+            if (isSelected) bg = correct ? "#bbf7d0" : "#fecaca";
+            else if (correct) bg = "#bbf7d0";
+          }
+          return (
+            <TouchableOpacity
+              key={i}
+              onPress={() => handleAnswer(i)}
+              style={[styles.option, { backgroundColor: bg }]}
+            >
+              <Text>{opt}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text style={{ marginTop: 12 }}>Acertos até agora: {score}</Text>
+    </View>
+  );
+}
+
+// ---------- PRATICAR (Banco digital simulado com 4 contas) ----------
+
+// Tela de boas-vindas do banco
+function BankWelcomeScreen({ navigation }) {
+  const { accounts } = useContext(BankContext);
+  const contas = Object.values(accounts);
+
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: COLORS.bg }]}>
+      <Text style={styles.title}>Banco Edufinanciar (simulado)</Text>
+      <Text style={{ color: COLORS.muted, marginTop: 4 }}>
+        Escolha uma pessoa/conta para treinar. Depois, entre com o PIN de 4
+        dígitos.
+      </Text>
+
+      {contas.map((acc) => (
+        <AnimatedButton
+          key={acc.id}
+          style={styles.modTouchable}
+          onPress={() =>
+            navigation.navigate("BankPin", { accountId: acc.id })
+          }
+        >
+          <Text style={styles.modTitle}>
+            {acc.apelido} — {acc.bankName}
+          </Text>
+          <Text style={styles.modSmall}>
+            PIN padrão desta conta: {acc.pin}
+          </Text>
+        </AnimatedButton>
+      ))}
+
+      <View style={{ marginTop: 12 }}>
+        <Text style={{ color: COLORS.muted, fontSize: 12 }}>
+          Você pode entrar como Pessoa A, enviar um Pix para Pessoa B, depois
+          sair e entrar como Pessoa B para ver o Pix recebido no extrato.
+        </Text>
+      </View>
+    </ScrollView>
+  );
+}
+
+// Tela de PIN
+function BankPinScreen({ route, navigation }) {
+  const { accountId } = route.params;
+  const { accounts, setCurrentId } = useContext(BankContext);
+  const [pin, setPin] = useState("");
+
+  const conta = accounts[accountId];
+
+  if (!conta) {
+    return (
+      <View style={[styles.container, { justifyContent: "center" }]}>
+        <Text style={styles.title}>Conta não encontrada</Text>
+        <AnimatedButton
+          style={[styles.btn, { marginTop: 16 }]}
+          onPress={() => navigation.replace("BankWelcome")}
+        >
+          <Text style={styles.btnText}>Voltar</Text>
+        </AnimatedButton>
+      </View>
+    );
+  }
+
+  function handleLogin() {
+    if (pin === conta.pin) {
+      setCurrentId(accountId);
+      setPin("");
+      navigation.replace("BankHome");
+    } else {
+      Alert.alert("PIN incorreto", "Digite o PIN correto para entrar.");
+    }
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
+      >
+        <Ionicons name="arrow-back" size={18} color={COLORS.muted} />
+        <Text style={{ marginLeft: 4, color: COLORS.muted }}>Voltar</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.title}>Login bancário</Text>
+      <Text style={{ color: COLORS.muted, marginTop: 4 }}>
+        Conta: {conta.apelido} — {conta.bankName}
+      </Text>
+
+      <Text style={styles.sub}>PIN (4 dígitos)</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="****"
+        secureTextEntry
+        keyboardType="numeric"
+        maxLength={4}
+        value={pin}
+        onChangeText={setPin}
+      />
+
+      <AnimatedButton style={styles.btn} onPress={handleLogin}>
+        <Text style={styles.btnText}>Entrar</Text>
+      </AnimatedButton>
+    </View>
+  );
+}
+
+// Tela principal do banco
+function BankHomeScreen({ navigation }) {
+  const { accounts, setAccounts, currentId, setCurrentId } =
+    useContext(BankContext);
+
+  const [mode, setMode] = useState("home"); // home | pix | boleto | chaves | juros
+  const [pixDest, setPixDest] = useState(null);
+  const [pixValor, setPixValor] = useState("");
+  const [boletoCodigo, setBoletoCodigo] = useState("");
+  const [boletoValor, setBoletoValor] = useState("");
+  const [jurosBase, setJurosBase] = useState("");
+  const [jurosResultado, setJurosResultado] = useState("");
+
+  useEffect(() => {
+    if (!currentId) {
+      navigation.replace("BankWelcome");
+    }
+  }, [currentId]);
+
+  if (!currentId) {
+    return null;
+  }
+
+  const conta = accounts[currentId];
+  const outrasContas = Object.values(accounts).filter(
+    (c) => c.id !== currentId
+  );
+
+  function sairConta() {
+    setCurrentId(null);
+    navigation.replace("BankWelcome");
+  }
+
+  function handlePix() {
+    if (!pixDest) {
+      return Alert.alert("Aviso", "Selecione uma conta de destino.");
+    }
+    const v = Number(String(pixValor).replace(",", "."));
+    if (!v || v <= 0) {
+      return Alert.alert("Aviso", "Digite um valor válido para o Pix.");
+    }
+    const origem = accounts[currentId];
+    const destino = accounts[pixDest];
+    if (!destino) {
+      return Alert.alert(
+        "Erro",
+        "Conta de destino inválida. Tente novamente."
+      );
+    }
+    if (origem.saldo < v) {
+      return Alert.alert(
+        "Saldo insuficiente",
+        "Seu saldo não é suficiente para este Pix."
+      );
+    }
+
+    setAccounts((prev) => {
+      const o = prev[currentId];
+      const d = prev[pixDest];
+      const now = new Date().toLocaleString();
+
+      const movOrigem = {
+        id: Date.now(),
+        tipo: "Pix enviado",
+        descricao: `Para ${d.apelido} (${d.bankName})`,
+        valor: -v,
+        data: now,
+      };
+      const movDestino = {
+        id: Date.now() + 1,
+        tipo: "Pix recebido",
+        descricao: `De ${o.apelido} (${o.bankName})`,
+        valor: v,
+        data: now,
+      };
+
+      return {
+        ...prev,
+        [currentId]: {
+          ...o,
+          saldo: o.saldo - v,
+          extrato: [movOrigem, ...o.extrato].slice(0, 20),
+        },
+        [pixDest]: {
+          ...d,
+          saldo: d.saldo + v,
+          extrato: [movDestino, ...d.extrato].slice(0, 20),
+        },
+      };
+    });
+
+    Alert.alert(
+      "Pix enviado",
+      `Você enviou R$ ${v.toFixed(2)} para ${destino.apelido}.`
+    );
+    setPixValor("");
+    setPixDest(null);
+    setMode("home");
+  }
+
+  function handleBoleto() {
+    const codigoLimpo = boletoCodigo.replace(/\D/g, "");
+    if (codigoLimpo.length < 30) {
+      return Alert.alert(
+        "Código inválido",
+        "Digite um código de barras de boleto (use só números)."
+      );
+    }
+    const v = Number(String(boletoValor).replace(",", "."));
+    if (!v || v <= 0) {
+      return Alert.alert("Aviso", "Digite um valor válido para o boleto.");
+    }
+    if (conta.saldo < v) {
+      return Alert.alert(
+        "Saldo insuficiente",
+        "Seu saldo não é suficiente para este boleto."
+      );
+    }
+
+    setAccounts((prev) => {
+      const c = prev[currentId];
+      const now = new Date().toLocaleString();
+      const mov = {
+        id: Date.now(),
+        tipo: "Boleto pago",
+        descricao: `Boleto final ${codigoLimpo.slice(-5)}`,
+        valor: -v,
+        data: now,
+      };
+      return {
+        ...prev,
+        [currentId]: {
+          ...c,
+          saldo: c.saldo - v,
+          extrato: [mov, ...c.extrato].slice(0, 20),
+        },
+      };
+    });
+
+    Alert.alert(
+      "Boleto pago",
+      `Boleto de R$ ${v.toFixed(2)} pago com sucesso (simulação).`
+    );
+    setBoletoCodigo("");
+    setBoletoValor("");
+    setMode("home");
+  }
+
+  function calcJuros() {
+    const n = Number(String(jurosBase).replace(",", "."));
+    if (!n || n <= 0) {
+      return setJurosResultado("Digite um valor numérico válido.");
+    }
+    const montante = n * 1.1; // 10% simples
+    setJurosResultado(
+      `Exemplo: após 1 mês a 10% de juros simples você pagaria ~ R$ ${montante.toFixed(
+        2
+      )}.`
+    );
+  }
+
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: COLORS.bg }]}>
+      {/* Cabeçalho conta atual */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: COLORS.primary,
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 8,
+            }}
+          >
+            <Text
+              style={{
+                color: "#f9fafb",
+                fontWeight: "800",
+                fontSize: 18,
+              }}
+            >
+              Ef
+            </Text>
+          </View>
+          <View>
+            <Text style={{ fontWeight: "700", color: COLORS.text }}>
+              {conta.apelido}
+            </Text>
+            <Text style={{ color: COLORS.muted, fontSize: 12 }}>
+              {conta.bankName}
+            </Text>
+          </View>
+        </View>
+        <TouchableOpacity onPress={sairConta}>
+          <Text style={{ color: COLORS.accentBlue, fontWeight: "600" }}>
+            Trocar conta
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Card de saldo */}
+      <View
+        style={{
+          backgroundColor: COLORS.primary,
+          padding: 16,
+          borderRadius: 16,
+          marginTop: 14,
+        }}
+      >
+        <Text style={{ color: "#ecfdf5", fontSize: 13 }}>Saldo em conta</Text>
+        <Text
+          style={{
+            color: "#fff",
+            fontSize: 26,
+            fontWeight: "700",
+            marginTop: 4,
+          }}
+        >
+          R$ {conta.saldo.toFixed(2)}
+        </Text>
+        <Text style={{ color: "#bbf7d0", marginTop: 6, fontSize: 12 }}>
+          Use esta conta apenas para treino, sem risco real.
+        </Text>
+      </View>
+
+      {/* Ações rápidas */}
+      <View
+        style={{
+          flexDirection: "row",
+          marginTop: 16,
+          justifyContent: "space-between",
+        }}
+      >
+        <TouchableOpacity
+          style={[
+            styles.quickAction,
+            mode === "pix" && { backgroundColor: COLORS.primaryLight },
+          ]}
+          onPress={() => setMode("pix")}
+        >
+          <Ionicons
+            name="send"
+            size={20}
+            color={mode === "pix" ? COLORS.primaryDark : COLORS.muted}
+          />
+          <Text
+            style={{
+              marginTop: 4,
+              fontSize: 12,
+              color: mode === "pix" ? COLORS.primaryDark : COLORS.muted,
+            }}
+          >
+            Pix
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.quickAction,
+            mode === "boleto" && { backgroundColor: COLORS.primaryLight },
+          ]}
+          onPress={() => setMode("boleto")}
+        >
+          <Ionicons
+            name="document-text"
+            size={20}
+            color={mode === "boleto" ? COLORS.primaryDark : COLORS.muted}
+          />
+          <Text
+            style={{
+              marginTop: 4,
+              fontSize: 12,
+              color: mode === "boleto" ? COLORS.primaryDark : COLORS.muted,
+            }}
+          >
+            Boleto
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.quickAction,
+            mode === "chaves" && { backgroundColor: COLORS.primaryLight },
+          ]}
+          onPress={() => setMode("chaves")}
+        >
+          <Ionicons
+            name="key"
+            size={20}
+            color={mode === "chaves" ? COLORS.primaryDark : COLORS.muted}
+          />
+          <Text
+            style={{
+              marginTop: 4,
+              fontSize: 12,
+              color: mode === "chaves" ? COLORS.primaryDark : COLORS.muted,
+            }}
+          >
+            Chaves Pix
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.quickAction,
+            mode === "juros" && { backgroundColor: COLORS.primaryLight },
+          ]}
+          onPress={() => setMode("juros")}
+        >
+          <Ionicons
+            name="calculator"
+            size={20}
+            color={mode === "juros" ? COLORS.primaryDark : COLORS.muted}
+          />
+          <Text
+            style={{
+              marginTop: 4,
+              fontSize: 12,
+              color: mode === "juros" ? COLORS.primaryDark : COLORS.muted,
+            }}
+          >
+            Juros
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Conteúdo da ação selecionada */}
+      {mode === "pix" && (
+        <View style={{ marginTop: 18 }}>
+          <Text style={styles.sub}>Fazer Pix (simulado)</Text>
+          <Text style={{ color: COLORS.muted, fontSize: 12 }}>
+            1. Escolha para quem enviar. 2. Digite o valor. 3. Confirme.
+          </Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginTop: 8 }}
+          >
+            {outrasContas.map((c) => {
+              const selected = pixDest === c.id;
+              return (
+                <TouchableOpacity
+                  key={c.id}
+                  onPress={() => setPixDest(c.id)}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: selected ? COLORS.primary : "#e5e7eb",
+                    backgroundColor: selected
+                      ? COLORS.primaryLight
+                      : COLORS.card,
+                    marginRight: 8,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: selected ? COLORS.primaryDark : COLORS.text,
+                    }}
+                  >
+                    {c.apelido} ({c.bankName})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Valor (ex: 50,00)"
+            keyboardType="numeric"
+            value={pixValor}
+            onChangeText={setPixValor}
+          />
+
+          <AnimatedButton style={styles.btn} onPress={handlePix}>
+            <Text style={styles.btnText}>Enviar Pix</Text>
+          </AnimatedButton>
+        </View>
+      )}
+
+      {mode === "boleto" && (
+        <View style={{ marginTop: 18 }}>
+          <Text style={styles.sub}>Pagamento de boleto (simulado)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Código de barras (só números)"
+            keyboardType="numeric"
+            value={boletoCodigo}
+            onChangeText={setBoletoCodigo}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Valor do boleto (ex: 120,50)"
+            keyboardType="numeric"
+            value={boletoValor}
+            onChangeText={setBoletoValor}
+          />
+          <AnimatedButton style={styles.btn} onPress={handleBoleto}>
+            <Text style={styles.btnText}>Pagar boleto</Text>
+          </AnimatedButton>
+        </View>
+      )}
+
+      {mode === "chaves" && (
+        <View style={{ marginTop: 18 }}>
+          <Text style={styles.sub}>Chaves Pix das contas (para treino)</Text>
+          <Text style={{ color: COLORS.muted, fontSize: 12, marginBottom: 6 }}>
+            Imagine que você vai enviar Pix usando CPF, e-mail ou celular
+            abaixo. Aqui é só para visualizar como as chaves funcionam.
+          </Text>
+          {Object.values(accounts).map((c) => (
+            <View key={c.id} style={styles.topicBox}>
+              <Text style={styles.topicTitle}>
+                {c.apelido} — {c.bankName}
+              </Text>
+              <Text style={styles.topicText}>CPF: {c.chaves.cpf}</Text>
+              <Text style={styles.topicText}>E-mail: {c.chaves.email}</Text>
+              <Text style={styles.topicText}>Celular: {c.chaves.celular}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {mode === "juros" && (
+        <View style={{ marginTop: 18 }}>
+          <Text style={styles.sub}>Simulador de juros simples</Text>
+          <Text style={{ color: COLORS.muted, fontSize: 12 }}>
+            Exemplo: você faz uma compra no cartão e paga 10% de juros em 1
+            mês.
+          </Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Valor da dívida (ex: 300)"
+            keyboardType="numeric"
+            value={jurosBase}
+            onChangeText={setJurosBase}
+          />
+          <AnimatedButton style={styles.btn} onPress={calcJuros}>
+            <Text style={styles.btnText}>Calcular exemplo</Text>
+          </AnimatedButton>
+          {jurosResultado !== "" && (
+            <Text style={{ marginTop: 10, fontSize: 14 }}>
+              {jurosResultado}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* Extrato sempre visível na parte de baixo */}
+      <Text style={[styles.sub, { marginTop: 24 }]}>Extrato recente</Text>
+      {conta.extrato.length === 0 && (
+        <Text style={{ color: COLORS.muted, marginTop: 4 }}>
+          Nenhuma movimentação ainda. Faça um Pix ou pague um boleto para ver
+          aqui.
+        </Text>
+      )}
+      {conta.extrato.map((mov) => (
+        <View
+          key={mov.id}
+          style={{
+            backgroundColor: COLORS.card,
+            padding: 10,
+            borderRadius: 10,
+            marginTop: 6,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            borderWidth: 1,
+            borderColor: "#e5e7eb",
+          }}
+        >
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Text style={{ fontWeight: "600", color: COLORS.text }}>
+              {mov.tipo}
+            </Text>
+            <Text style={{ fontSize: 12, color: COLORS.muted }}>
+              {mov.descricao}
+            </Text>
+            <Text style={{ fontSize: 11, color: COLORS.muted }}>
+              {mov.data}
+            </Text>
+          </View>
+          <Text
+            style={{
+              fontWeight: "700",
+              color: mov.valor < 0 ? "#ef4444" : "#22c55e",
+            }}
+          >
+            {mov.valor < 0 ? "-" : "+"} R$ {Math.abs(mov.valor).toFixed(2)}
+          </Text>
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
+// ---------- QUIZ ROOT (ABA QUIZ) ----------
+function QuizHome({ navigation }) {
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: COLORS.bg }]}>
+      <Text style={styles.title}>Quiz e Simulados</Text>
+      <Text style={{ color: COLORS.muted, marginTop: 8 }}>
+        • Para quiz por assunto, use a aba{" "}
+        <Text style={{ fontWeight: "700" }}>Aprender</Text> e escolha um
+        módulo.
+      </Text>
+      <Text style={{ color: COLORS.muted, marginTop: 4 }}>
+        • Aqui você pode fazer o{" "}
+        <Text style={{ fontWeight: "700" }}>Simulado Geral</Text> com as 60
+        questões.
+      </Text>
+
+      <AnimatedButton
+        style={[styles.card, { marginTop: 20 }]}
+        onPress={() => navigation.navigate("QuizGeral")}
+      >
+        <Text style={styles.cardTitle}>🧪 Simulado Geral (60 questões)</Text>
+        <Text style={styles.cardDesc}>
+          Avaliação completa de bancos, cartões, apps de pagamento, segurança,
+          orçamento e investimentos.
+        </Text>
+      </AnimatedButton>
+    </ScrollView>
+  );
+}
+
+// ---------- QUIZ GERAL (60 QUESTÕES) ----------
+function QuizGeralScreen({ navigation }) {
+  const { userEmail } = useContext(UserContext);
+
+  const questions = QUIZ; // todas as 60
+  const [index, setIndex] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [score, setScore] = useState(0);
+  const [finished, setFinished] = useState(false);
+
+  async function handleAnswer(i) {
+    if (selected !== null) return;
+    setSelected(i);
+    const correct = questions[index].answer === i;
+    if (correct) setScore((s) => s + 1);
+
+    setTimeout(async () => {
+      setSelected(null);
+      if (index + 1 < questions.length) {
+        setIndex((idx) => idx + 1);
+      } else {
+        setFinished(true);
+        const acertos = score + (correct ? 1 : 0);
+        try {
+          const { earnedXp, newXp, streak } = await registrarResultadoQuiz({
+            acertos,
+            total: questions.length,
+            tipo: "geral",
+            moduleId: "GERAL",
+            userEmail,
+          });
+
+          Alert.alert(
+            "Simulado Geral finalizado",
+            `Acertos: ${acertos}/${questions.length}\nXP ganho: ${earnedXp}\nXP total: ${newXp}\nStreak: ${streak} dia(s)`
+          );
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }, 600);
+  }
+
+  if (finished) {
+    const nota = ((score / questions.length) * 10).toFixed(1);
+    return (
+      <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
+        <Text style={styles.title}>Resultado do Simulado Geral</Text>
+        <Text style={{ marginTop: 12 }}>
+          Acertos: {score} / {questions.length}
+        </Text>
+        <Text style={{ marginTop: 8, fontSize: 16 }}>
+          Nota aproximada: {nota} / 10
+        </Text>
+
+        <AnimatedButton
+          style={[styles.btn, { marginTop: 16 }]}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.btnText}>Voltar</Text>
+        </AnimatedButton>
+        <AnimatedButton
+          style={[styles.btn, { marginTop: 10, backgroundColor: "#6b7280" }]}
+          onPress={() => {
+            setIndex(0);
+            setScore(0);
+            setSelected(null);
+            setFinished(false);
+          }}
+        >
+          <Text style={styles.btnText}>Refazer simulado</Text>
+        </AnimatedButton>
+      </View>
+    );
+  }
+
+  const q = questions[index];
+
+  return (
+    <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
+      <Text style={styles.count}>
+        Pergunta {index + 1} / {questions.length}
+      </Text>
+      <Text style={styles.question}>{q.question}</Text>
+      <View style={{ marginTop: 12 }}>
+        {q.options.map((opt, i) => {
+          const isSelected = selected === i;
+          const correct = q.answer === i;
+          let bg = "#fff";
+          if (selected !== null) {
+            if (isSelected) bg = correct ? "#bbf7d0" : "#fecaca";
+            else if (correct) bg = "#bbf7d0";
+          }
+          return (
+            <TouchableOpacity
+              key={i}
+              onPress={() => handleAnswer(i)}
+              style={[styles.option, { backgroundColor: bg }]}
+            >
+              <Text>{opt}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text style={{ marginTop: 12 }}>Acertos até agora: {score}</Text>
+    </View>
+  );
+}
+
+// ---------- PROGRESSO (Estilo Duolingo) ----------
+// ---------- PROGRESSO (Estilo Duolingo melhorado) ----------
+function ProgressoScreen() {
+  const { userEmail } = useContext(UserContext);
+  const [xp, setXp] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [last, setLast] = useState(null);
+  const [logs, setLogs] = useState([]);
+
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const medalScale = useRef(new Animated.Value(0)).current;
+
+  // define ícone, nome e cor da medalha + cor da barra de XP
+  function getMedalInfo(xpTotal) {
+    if (xpTotal >= 1000) {
+      return {
+        icon: "💎",
+        label: "Medalha Diamante",
+        color: "#22d3ee",
+        barColor: "#22d3ee",
+        next: null,
+      };
+    }
+    if (xpTotal >= 600) {
+      return {
+        icon: "🥇",
+        label: "Medalha Ouro",
+        color: "#facc15",
+        barColor: "#facc15",
+        next: "Diamante (1000 XP)",
+      };
+    }
+    if (xpTotal >= 300) {
+      return {
+        icon: "🥈",
+        label: "Medalha Prata",
+        color: "#e5e7eb",
+        barColor: "#9ca3af",
+        next: "Ouro (600 XP)",
+      };
+    }
+    if (xpTotal >= 100) {
+      return {
+        icon: "🥉",
+        label: "Medalha Bronze",
+        color: "#fb923c",
+        barColor: "#fb923c",
+        next: "Prata (300 XP)",
+      };
+    }
+    return {
+      icon: "🎯",
+      label: "Iniciante",
+      color: COLORS.accentBlue,
+      barColor: COLORS.primary,
+      next: "Bronze (100 XP)",
+    };
+  }
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const cur = await AsyncStorage.getItem("@app_xp");
+        const s = await AsyncStorage.getItem("@app_streak");
+        const l = await AsyncStorage.getItem("@app_last_quiz");
+        const xpNum = cur ? Number(cur) : 0;
+
+        setXp(xpNum);
+        setStreak(s ? Number(s) : 0);
+        setLast(l || null);
+
+        // calcula quanto do nível atual já foi preenchido
+        const resto = xpNum % 100;
+        const xpNivelDisplay =
+          xpNum === 0 ? 0 : resto === 0 ? 100 : resto;
+
+        // anima barra de XP
+        progressAnim.setValue(0);
+        Animated.timing(progressAnim, {
+          toValue: xpNivelDisplay,
+          duration: 700,
+          useNativeDriver: false,
+        }).start();
+
+        // anima medalha (pulinho)
+        medalScale.setValue(0);
+        Animated.spring(medalScale, {
+          toValue: 1,
+          useNativeDriver: true,
+          friction: 4,
+          tension: 80,
+        }).start();
+
+        // histórico de quizzes
+        const historyRaw = await AsyncStorage.getItem("@quiz_history");
+        const history = historyRaw ? JSON.parse(historyRaw) : [];
+        const filtered = userEmail
+          ? history.filter((h) => h.email === userEmail)
+          : history;
+        setLogs(filtered);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, [userEmail]);
+
+  const level = Math.floor(xp / 100) + 1;
+
+  const barWidth = progressAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ["0%", "100%"],
+  });
+
+  const medalInfo = getMedalInfo(xp);
+
+  const resto = xp % 100;
+  const xpNivelDisplay = xp === 0 ? 0 : resto === 0 ? 100 : resto;
+  const faltaProxNivel = xp === 0 ? 100 : 100 - xpNivelDisplay;
+
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: COLORS.bg }]}>
+      <Text style={styles.title}>Progresso</Text>
+
+      {/* CARD PRINCIPAL COM MEDALHA, NÍVEL E XP */}
+      <View
+        style={{
+          backgroundColor: COLORS.card,
+          borderRadius: 16,
+          padding: 16,
+          marginTop: 12,
+          shadowColor: "#000",
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
+          elevation: 2,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Animated.View
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 999,
+              backgroundColor: COLORS.primaryLight,
+              alignItems: "center",
+              justifyContent: "center",
+              transform: [{ scale: medalScale }],
+            }}
+          >
+            <Text style={{ fontSize: 32 }}>{medalInfo.icon}</Text>
+          </Animated.View>
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "700",
+                color: COLORS.text,
+              }}
+            >
+              Nível {level}
+            </Text>
+            <Text style={{ color: COLORS.muted, marginTop: 2 }}>
+              {medalInfo.label}
+            </Text>
+            <Text
+              style={{
+                color: COLORS.muted,
+                marginTop: 4,
+                fontSize: 12,
+              }}
+            >
+              XP total: {xp}
+            </Text>
+          </View>
+
+          {/* chip da medalha */}
+          <View
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 999,
+              backgroundColor: medalInfo.barColor,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 11,
+                fontWeight: "700",
+                color: "#022c22",
+              }}
+            >
+              {xp >= 1000
+                ? "Máx"
+                : `${level * 100} XP`}
+            </Text>
+          </View>
+        </View>
+
+        {/* BARRA DE XP COLORIDA */}
+        <View
+          style={{
+            marginTop: 14,
+            height: 18,
+            backgroundColor: "#e5e7eb",
+            borderRadius: 999,
+            overflow: "hidden",
+          }}
+        >
+          <Animated.View
+            style={{
+              height: "100%",
+              width: barWidth,
+              backgroundColor: medalInfo.barColor,
+            }}
+          />
+        </View>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            marginTop: 4,
+          }}
+        >
+          <Text style={{ fontSize: 12, color: COLORS.muted }}>
+            {xpNivelDisplay} / 100 XP neste nível
+          </Text>
+          <Text style={{ fontSize: 12, color: COLORS.muted }}>
+            Faltam {faltaProxNivel} XP
+          </Text>
+        </View>
+
+        {/* PRÓXIMA MEDALHA */}
+        {medalInfo.next && (
+          <Text
+            style={{
+              marginTop: 8,
+              fontSize: 12,
+              color: medalInfo.color,
+              fontWeight: "600",
+            }}
+          >
+            Próxima conquista: {medalInfo.next}
+          </Text>
+        )}
+      </View>
+
+      {/* STREAK */}
+      <View
+        style={{
+          backgroundColor: "#fef3c7",
+          borderRadius: 16,
+          padding: 14,
+          marginTop: 12,
+          flexDirection: "row",
+          alignItems: "center",
+        }}
+      >
+        <Text style={{ fontSize: 26, marginRight: 10 }}>🔥</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontWeight: "700", color: "#92400e" }}>
+            Streak de estudos
+          </Text>
+          <Text style={{ color: "#92400e", marginTop: 2 }}>
+            {streak} dia(s) seguidos fazendo quiz.
+          </Text>
+          {last && (
+            <Text style={{ color: "#b45309", fontSize: 11, marginTop: 2 }}>
+              Último quiz feito em: {last}
+            </Text>
+          )}
+          {streak === 0 && (
+            <Text style={{ color: "#b45309", fontSize: 11, marginTop: 2 }}>
+              Comece hoje um streak respondendo qualquer quiz. 🚀
+            </Text>
+          )}
+        </View>
+      </View>
+
+      {/* HISTÓRICO */}
+      <Text style={[styles.sub, { marginTop: 20 }]}>
+        Histórico recente de quizzes
+      </Text>
+      {logs.length === 0 && (
+        <Text style={{ color: COLORS.muted, marginTop: 4 }}>
+          Nenhum registro ainda. Faça um quiz para aparecer aqui.
+        </Text>
+      )}
+      {logs.map((log) => {
+        const mod =
+          log.module === "GERAL"
+            ? { title: "Simulado Geral" }
+            : MODULOS.find((m) => m.id === log.module);
+        const tipoLabel =
+          log.kind === "geral" ? "Simulado Geral" : "Quiz por módulo";
+        const icon = log.kind === "geral" ? "🧪" : "📘";
+        const bgColor =
+          log.kind === "geral" ? "#eff6ff" : "#f5f3ff";
+
+        return (
+          <View
+            key={log.id}
+            style={{
+              backgroundColor: bgColor,
+              padding: 10,
+              borderRadius: 10,
+              marginTop: 8,
+              borderLeftWidth: 4,
+              borderLeftColor:
+                log.kind === "geral"
+                  ? COLORS.accentBlue
+                  : COLORS.primary,
+            }}
+          >
+            <Text style={{ fontWeight: "700", color: COLORS.text }}>
+              {icon} {mod?.title ?? log.module}
+            </Text>
+            <Text style={{ color: COLORS.muted, fontSize: 12 }}>
+              {tipoLabel} — Acertos: {log.correct}/{log.total}
+            </Text>
+            <Text style={{ color: COLORS.muted, fontSize: 11 }}>
+              {new Date(log.created_at).toLocaleString()}
+            </Text>
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+
+// ---------- STACKS ----------
+
+function AprenderStackScreen() {
+  return (
+    <LearnStack.Navigator screenOptions={{ headerShown: false }}>
+      <LearnStack.Screen name="AprenderHome" component={AprenderHome} />
+      <LearnStack.Screen name="Module" component={ModuleScreen} />
+      <LearnStack.Screen name="ModuleQuiz" component={ModuleQuizScreen} />
+    </LearnStack.Navigator>
+  );
+}
+
+function QuizStackScreen() {
+  return (
+    <QuizStack.Navigator screenOptions={{ headerShown: false }}>
+      <QuizStack.Screen name="QuizHome" component={QuizHome} />
+      <QuizStack.Screen name="QuizGeral" component={QuizGeralScreen} />
+    </QuizStack.Navigator>
+  );
+}
+
+// Stack da aba Praticar (Banco)
+function PraticarStackScreen() {
+  const [accounts, setAccounts] = useState(INITIAL_CONTAS);
+  const [currentId, setCurrentId] = useState(null);
+
+  return (
+    <BankContext.Provider
+      value={{ accounts, setAccounts, currentId, setCurrentId }}
+    >
+      <PracticeStack.Navigator screenOptions={{ headerShown: false }}>
+        <PracticeStack.Screen
+          name="BankWelcome"
+          component={BankWelcomeScreen}
+        />
+        <PracticeStack.Screen name="BankPin" component={BankPinScreen} />
+        <PracticeStack.Screen name="BankHome" component={BankHomeScreen} />
+      </PracticeStack.Navigator>
+    </BankContext.Provider>
+  );
+}
+
+// ---------- TABS ----------
+function MainTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: COLORS.primaryDark,
+        tabBarInactiveTintColor: COLORS.muted,
+        tabBarStyle: {
+          height: 64,
+          paddingBottom: 6,
+          paddingTop: 6,
+          backgroundColor: COLORS.card,
+          borderTopColor: "#e5e7eb",
+        },
+        tabBarIcon: ({ color, size }) => {
+          const icons = {
+            Início: "home",
+            Aprender: "book",
+            Praticar: "construct",
+            Quiz: "help-circle",
+            Progresso: "stats-chart",
+            Dicas: "shield-checkmark",   // 👈 ADICIONE AQUI TAMBÉM
+          };
+          return (
+            <Ionicons
+              name={icons[route.name]}
+              size={size ?? 22}
+              color={color}
+            />
+          );
+        },
+      })}
+    >
+      <Tab.Screen name="Início" component={HomeScreen} />
+      <Tab.Screen name="Aprender" component={AprenderStackScreen} />
+      <Tab.Screen name="Praticar" component={PraticarStackScreen} />
+      <Tab.Screen name="Quiz" component={QuizStackScreen} />
+      <Tab.Screen name="Progresso" component={ProgressoScreen} />
+
+      {/* 👇 NOVA ABA AQUI */}
+      <Tab.Screen
+        name="Dicas"
+        component={DicasDeSegurancaScreen}
+      />
+    </Tab.Navigator>
+  );
+}
+// ---------- APP INNER (LOGIN x LOGADO) ----------
+function AppInner() {
+  const [userEmail, setUserEmail] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem("@user_email");
+        if (stored) setUserEmail(stored);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoadingUser(false);
+      }
+    })();
+  }, []);
+
+  if (loadingUser) {
+  return (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <ActivityIndicator size="large" color="#2563eb" />
+    </View>
+  );
+}
+
+  return (
+    <UserContext.Provider value={{ userEmail, setUserEmail }}>
+      <NavigationContainer>
+        <RootStack.Navigator screenOptions={{ headerShown: false }}>
+          {userEmail ? (
+            <RootStack.Screen name="MainTabs" component={MainTabs} />
+          ) : (
+            <RootStack.Screen name="Login" component={LoginScreen} />
+          )}
+        </RootStack.Navigator>
+      </NavigationContainer>
+    </UserContext.Provider>
+  );
+}
+function DicaAnimada({ icon, title, text, delay }) {
+  const fade = React.useRef(new Animated.Value(0)).current;
+  const scale = React.useRef(new Animated.Value(0.6)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 350,
+        delay,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        friction: 5,
+        delay,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: fade,
+        transform: [{ scale }],
+        backgroundColor: "#fff",
+        padding: 14,
+        marginTop: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#ddd",
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <Ionicons name={icon} size={26} color="#1e3a8a" />
+        <Text style={{ fontSize: 16, fontWeight: "700", marginLeft: 10 }}>
+          {title}
+        </Text>
+      </View>
+
+      <Text style={{ marginTop: 6, color: "#555" }}>
+        {text}
+      </Text>
+    </Animated.View>
+  );
+}
+
+
+// ---------- ROOT + SPLASH ----------
+export default function App() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 1200);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (!ready) return <SplashScreen />;
+
+  return (
+  <GestureHandlerRootView style={{ flex: 1 }}>
+    <AppInner />
+  </GestureHandlerRootView>
+);
+
+}
+
+// ---------- ESTILOS ----------
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 18, backgroundColor: COLORS.bg },
+  title: { fontSize: 22, fontWeight: "700", color: COLORS.text },
+
+  card: {
+    backgroundColor: COLORS.card,
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  cardTitle: { fontWeight: "700", color: COLORS.text, fontSize: 16 },
+  cardDesc: { marginTop: 6, color: COLORS.muted, fontSize: 13 },
+
+  modGroup: { marginTop: 12 },
+  modTouchable: {
+    backgroundColor: COLORS.card,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  modTitle: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  modSmall: { color: COLORS.muted, marginTop: 4, fontSize: 12 },
+
+  topicBox: {
+    marginTop: 8,
+    backgroundColor: COLORS.card,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  topicTitle: {
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  topicText: {
+    color: COLORS.muted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+
+  input: {
+    marginTop: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+  },
+  sub: { marginTop: 12, fontSize: 13, color: COLORS.muted },
+
+  btn: {
+    backgroundColor: COLORS.primary,
+    padding: 12,
+    marginTop: 12,
+    borderRadius: 999,
+    alignItems: "center",
+  },
+  btnText: { color: "#fff", fontWeight: "700" },
+
+  option: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  count: { color: COLORS.muted, marginBottom: 8 },
+  question: { fontSize: 18, marginTop: 8, color: "#222" },
+
+  quickAction: {
+    flex: 1,
+    marginHorizontal: 2,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+});
+// =========================================
+// DICAS DE SEGURANÇA — COM ANIMAÇÃO
+// =========================================
+
+function DicasDeSegurancaScreen() {
+  const dicas = [
+    { icon: "shield-checkmark", title: "Use senhas fortes", text: "Misture letras, números e símbolos." },
+    { icon: "phone-portrait", title: "Ative 2FA", text: "Proteção extra contra invasões." },
+    { icon: "wifi", title: "Evite Wi-Fi público", text: "Use dados móveis ao acessar bancos." },
+    { icon: "alert-circle", title: "Desconfie de mensagens", text: "Golpistas usam urgência como isca." },
+    { icon: "lock-closed", title: "Nunca compartilhe códigos", text: "SMS e tokens são apenas seus." },
+  ];
+
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>Dicas de Segurança</Text>
+
+      {dicas.map((d, index) => (
+  <DicaAnimada
+    key={index}
+    icon={d.icon}
+    title={d.title}
+    text={d.text}
+    delay={index * 120}
+  />
+))}
+
+    </ScrollView>
+  );
+}
