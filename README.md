@@ -34,7 +34,7 @@ Este projeto é um Produto Mínimo Viável (MVP) desenvolvido como Trabalho de C
 ---
 
 ## 📊 Metodologia e Validação
-O desenvolvimento foi orientado por uma pesquisa de campo com **30 participantes reais**. Os requisitos de software e o banco de 60 questões foram elaborados para sanar as dores identificadas nesta amostra (dificuldade com tecnologia e medo de fraudes).
+O desenvolvimento foi orientado por uma pesquisa de campo com **30 participantes reais**. Os requisitos de software e o banco de 60 questões foram elaborados para sanar as dores identificadas nesta amostra (dificuldade com tecnologia e medo de fraudes).E  O código deste protótipo foi gerado utilizando técnicas de Engenharia de Prompt e Prototipagem Ágil( IA Generativa (ChatGPT) )sob a supervisão e arquitetura do autor. A IA foi utilizada como ferramenta de produtividade para a codificação da interface (Front-end).
 
 ---
 
